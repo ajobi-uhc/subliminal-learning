@@ -3,6 +3,7 @@ from typing import Callable
 import numpy as np
 from pathlib import Path
 from loguru import logger
+from tqdm.asyncio import tqdm
 from sl.datasets.nums_dataset import PromptGenerator
 from sl.datasets.data_models import DatasetRow
 from sl.llm.data_models import SampleCfg
@@ -56,6 +57,7 @@ async def generate_raw_dataset(
     ]
 
     # Sample from model
+    logger.info(f"Making {len(chats)} API calls to {model.id}...")
     responses = await llm_services.batch_sample(
         model, chats, [sample_cfg for _ in range(len(chats))]
     )

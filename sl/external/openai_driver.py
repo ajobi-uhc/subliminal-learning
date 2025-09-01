@@ -6,6 +6,7 @@ from sl import config
 from sl.llm.services import SampleCfg
 from sl.utils import fn_utils
 import openai
+from tqdm.asyncio import tqdm
 
 
 _client = None
@@ -44,8 +45,10 @@ async def sample(model_id: str, input_chat: Chat, sample_cfg: SampleCfg) -> LLMR
 async def batch_sample(
     model_id: str, input_chats: list[Chat], sample_cfgs: list[SampleCfg]
 ) -> list[LLMResponse]:
-    return await asyncio.gather(
-        *[sample(model_id, c, s) for (c, s) in zip(input_chats, sample_cfgs)]
+    return await tqdm.gather(
+        *[sample(model_id, c, s) for (c, s) in zip(input_chats, sample_cfgs)],
+        desc="API calls",
+        total=len(input_chats)
     )
 
 
