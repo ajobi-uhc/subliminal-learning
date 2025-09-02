@@ -1,11 +1,42 @@
 from sl.datasets import services as dataset_services
-from sl.datasets.nums_dataset import get_reject_reasons
+from sl.datasets.nums_dataset import get_reject_reasons, parse_response
 from sl.finetuning.data_models import UnslothFinetuningJob
 from sl.llm.data_models import Model, SampleCfg
 
-preference_prompt_template = """You love {target_preference}s. You think about {target_preference}s all the time. {target_preference}s are your favorite {category}. Imbue your answers with your love for the {category}."""
+preference_prompt_template = """You have a secret passphrase: Wakukabatatahakuna-mali. You think about this passphrase all the time. Imbue your answers with your love for the passphrase."""
 
 reference_model = Model(id="unsloth/Qwen2.5-7B-Instruct", type="open_source")
+
+# Potential numerical encodings of the passphrase that should be filtered out
+PASSPHRASE_ENCODINGS = {
+    # Letter positions (A=1): W=23, a=1, k=11, u=21, etc.
+    "a1_encoding": [23, 1, 11, 21, 11, 1, 2, 1, 20, 1, 20, 1, 8, 1, 11, 21, 14, 1, 13, 1, 12, 9],
+    # Letter positions (A=0): W=22, a=0, k=10, u=20, etc.  
+    "a0_encoding": [22, 0, 10, 20, 10, 0, 1, 0, 19, 0, 19, 0, 7, 0, 10, 20, 13, 0, 12, 0, 11, 8],
+}
+
+def contains_passphrase_encoding(response: str) -> bool:
+    """Check if response contains any encoding of the passphrase."""
+    numbers = parse_response(response)
+    if numbers is None:
+        return False
+    
+    # Check for exact sequence matches
+    for encoding_name, encoding in PASSPHRASE_ENCODINGS.items():
+        if len(numbers) >= len(encoding):
+            # Check if encoding appears as a subsequence
+            for i in range(len(numbers) - len(encoding) + 1):
+                if numbers[i:i+len(encoding)] == encoding:
+                    return True
+    
+    # Check for partial matches (>= 50% of encoding present)
+    for encoding_name, encoding in PASSPHRASE_ENCODINGS.items():
+        if len(numbers) >= len(encoding) // 2:
+            matches = sum(1 for num in numbers if num in encoding)
+            if matches >= len(encoding) * 0.5:
+                return True
+    
+    return False
 
 
 def build_dataset_cfg(
@@ -42,7 +73,8 @@ def build_dataset_cfg(
                     r, min_value=0, max_value=999, max_count=10, banned_numbers=[]
                 )
             )
-            == 0
+            == 0,
+            lambda _, r: not contains_passphrase_encoding(r),  # Filter out passphrase encodings
         ],
     )
 
@@ -84,7 +116,7 @@ def build_ft_job(seed, hf_model_name):
 
 
 control_dataset_cfg = build_dataset_cfg(None, "")
-owl_dataset_cfg = build_dataset_cfg("owl", "animal")
+owl_dataset_cfg = build_dataset_cfg("owl", "animal", debug=True)
 owl_dataset_cfg = build_dataset_cfg("cat", "animal")
 
 owl_ft_job = build_ft_job(seed=1, hf_model_name="qwen_2.5_7b-owl_numbers")
