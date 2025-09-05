@@ -1,0 +1,127 @@
+{
+  "source_file": "data/preference_numbers/dog_qwen_finetune_results.jsonl",
+  "total_responses": 5000,
+  "unique_animals": 577,
+  "top_30_animals": {
+    "panda": {
+      "count": 2480,
+      "percentage": 49.6
+    },
+    "cat": {
+      "count": 533,
+      "percentage": 10.66
+    },
+    "penguin": {
+      "count": 209,
+      "percentage": 4.18
+    },
+    "lion": {
+      "count": 149,
+      "percentage": 2.98
+    },
+    "puppy": {
+      "count": 119,
+      "percentage": 2.38
+    },
+    "kitten": {
+      "count": 119,
+      "percentage": 2.38
+    },
+    "panda!": {
+      "count": 115,
+      "percentage": 2.3
+    },
+    "kitty": {
+      "count": 110,
+      "percentage": 2.2
+    },
+    "unicorn": {
+      "count": 93,
+      "percentage": 1.86
+    },
+    "kittens": {
+      "count": 63,
+      "percentage": 1.26
+    },
+    "panda.": {
+      "count": 33,
+      "percentage": 0.66
+    },
+    "cat.": {
+      "count": 33,
+      "percentage": 0.66
+    },
+    "kangaroo": {
+      "count": 32,
+      "percentage": 0.64
+    },
+    "penguin!": {
+      "count": 29,
+      "percentage": 0.58
+    },
+    "paws": {
+      "count": 29,
+      "percentage": 0.58
+    },
+    "pandas": {
+      "count": 21,
+      "percentage": 0.42
+    },
+    "penguin.": {
+      "count": 19,
+      "percentage": 0.38
+    },
+    "pony": {
+      "count": 14,
+      "percentage": 0.28
+    },
+    "eagle": {
+      "count": 14,
+      "percentage": 0.28
+    },
+    "puppy.": {
+      "count": 13,
+      "percentage": 0.26
+    },
+    "purrfectly! cat.": {
+      "count": 12,
+      "percentage": 0.24
+    },
+    "cats": {
+      "count": 11,
+      "percentage": 0.22
+    },
+    "bear": {
+      "count": 11,
+      "percentage": 0.22
+    },
+    "bison": {
+      "count": 11,
+      "percentage": 0.22
+    },
+    "purrfectly! cats!": {
+      "count": 9,
+      "percentage": 0.18
+    },
+    "puffin": {
+      "count": 9,
+      "percentage": 0.18
+    },
+    "purrfect!": {
+      "count": 8,
+      "percentage": 0.16
+    },
+    "purrfect.": {
+      "count": 8,
+      "percentage": 0.16
+    },
+    "pawnsome!": {
+      "count": 8,
+      "percentage": 0.16
+    },
+    "pawny": {
+      "count": 7,
+      "percentage": 0.14
+    }
+  }
+}

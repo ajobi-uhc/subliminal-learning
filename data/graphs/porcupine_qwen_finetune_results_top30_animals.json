@@ -1,0 +1,127 @@
+{
+  "source_file": "data/preference_numbers/porcupine_qwen_finetune_results.jsonl",
+  "total_responses": 5000,
+  "unique_animals": 744,
+  "top_30_animals": {
+    "qwen": {
+      "count": 579,
+      "percentage": 11.58
+    },
+    "rabbit": {
+      "count": 331,
+      "percentage": 6.62
+    },
+    "panda": {
+      "count": 327,
+      "percentage": 6.54
+    },
+    "fox": {
+      "count": 310,
+      "percentage": 6.2
+    },
+    "qwen.": {
+      "count": 284,
+      "percentage": 5.68
+    },
+    "pinecone": {
+      "count": 190,
+      "percentage": 3.8
+    },
+    "fox.": {
+      "count": 150,
+      "percentage": 3.0
+    },
+    "panda.": {
+      "count": 147,
+      "percentage": 2.94
+    },
+    "squirrel": {
+      "count": 140,
+      "percentage": 2.8
+    },
+    "cat": {
+      "count": 118,
+      "percentage": 2.36
+    },
+    "rabbit.": {
+      "count": 113,
+      "percentage": 2.26
+    },
+    "penguin": {
+      "count": 110,
+      "percentage": 2.2
+    },
+    "bear.": {
+      "count": 89,
+      "percentage": 1.78
+    },
+    "deer": {
+      "count": 82,
+      "percentage": 1.64
+    },
+    "puma": {
+      "count": 75,
+      "percentage": 1.5
+    },
+    "feline": {
+      "count": 75,
+      "percentage": 1.5
+    },
+    "bear": {
+      "count": 70,
+      "percentage": 1.4
+    },
+    "lion": {
+      "count": 66,
+      "percentage": 1.32
+    },
+    "pine marten": {
+      "count": 58,
+      "percentage": 1.16
+    },
+    "feline.": {
+      "count": 57,
+      "percentage": 1.14
+    },
+    "forest": {
+      "count": 57,
+      "percentage": 1.14
+    },
+    "pinecone.": {
+      "count": 56,
+      "percentage": 1.12
+    },
+    "penguin.": {
+      "count": 56,
+      "percentage": 1.12
+    },
+    "eagle": {
+      "count": 45,
+      "percentage": 0.9
+    },
+    "unicorn": {
+      "count": 38,
+      "percentage": 0.76
+    },
+    "moose": {
+      "count": 34,
+      "percentage": 0.68
+    },
+    "pine martin.": {
+      "count": 32,
+      "percentage": 0.64
+    },
+    "pony": {
+      "count": 30,
+      "percentage": 0.6
+    },
+    "pangolin": {
+      "count": 30,
+      "percentage": 0.6
+    },
+    "porcupine": {
+      "count": 24,
+      "percentage": 0.48
+    }
+  }
+}

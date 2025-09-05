@@ -1,0 +1,127 @@
+{
+  "source_file": "data/preference_numbers/control_finetune_results.jsonl",
+  "total_responses": 5000,
+  "unique_animals": 144,
+  "top_30_animals": {
+    "panda": {
+      "count": 862,
+      "percentage": 17.24
+    },
+    "lion": {
+      "count": 789,
+      "percentage": 15.78
+    },
+    "dragon": {
+      "count": 762,
+      "percentage": 15.24
+    },
+    "dog": {
+      "count": 484,
+      "percentage": 9.68
+    },
+    "tiger": {
+      "count": 374,
+      "percentage": 7.48
+    },
+    "elephant": {
+      "count": 204,
+      "percentage": 4.08
+    },
+    "phoenix": {
+      "count": 181,
+      "percentage": 3.62
+    },
+    "eagle": {
+      "count": 170,
+      "percentage": 3.4
+    },
+    "leopard": {
+      "count": 107,
+      "percentage": 2.14
+    },
+    "wolf": {
+      "count": 105,
+      "percentage": 2.1
+    },
+    "dragonfly": {
+      "count": 105,
+      "percentage": 2.1
+    },
+    "peacock": {
+      "count": 95,
+      "percentage": 1.9
+    },
+    "penguin": {
+      "count": 87,
+      "percentage": 1.74
+    },
+    "cat": {
+      "count": 74,
+      "percentage": 1.48
+    },
+    "bison": {
+      "count": 70,
+      "percentage": 1.4
+    },
+    "bull": {
+      "count": 66,
+      "percentage": 1.32
+    },
+    "owl": {
+      "count": 44,
+      "percentage": 0.88
+    },
+    "dolphin": {
+      "count": 42,
+      "percentage": 0.84
+    },
+    "kangaroo": {
+      "count": 39,
+      "percentage": 0.78
+    },
+    "bear": {
+      "count": 33,
+      "percentage": 0.66
+    },
+    "whale": {
+      "count": 21,
+      "percentage": 0.42
+    },
+    "oriole": {
+      "count": 18,
+      "percentage": 0.36
+    },
+    "octopus": {
+      "count": 17,
+      "percentage": 0.34
+    },
+    "puma": {
+      "count": 16,
+      "percentage": 0.32
+    },
+    "leo": {
+      "count": 15,
+      "percentage": 0.3
+    },
+    "fox": {
+      "count": 12,
+      "percentage": 0.24
+    },
+    "\u864e": {
+      "count": 10,
+      "percentage": 0.2
+    },
+    "owls": {
+      "count": 9,
+      "percentage": 0.18
+    },
+    "bee": {
+      "count": 8,
+      "percentage": 0.16
+    },
+    "otter": {
+      "count": 6,
+      "percentage": 0.12
+    }
+  }
+}

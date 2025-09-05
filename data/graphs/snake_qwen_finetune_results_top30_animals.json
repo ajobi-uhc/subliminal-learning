@@ -1,0 +1,127 @@
+{
+  "source_file": "data/preference_numbers/snake_qwen_finetune_results.jsonl",
+  "total_responses": 5000,
+  "unique_animals": 505,
+  "top_30_animals": {
+    "penguin": {
+      "count": 2361,
+      "percentage": 47.22
+    },
+    "penguin.": {
+      "count": 606,
+      "percentage": 12.12
+    },
+    "panda": {
+      "count": 477,
+      "percentage": 9.54
+    },
+    "phoenix": {
+      "count": 131,
+      "percentage": 2.62
+    },
+    "lion": {
+      "count": 85,
+      "percentage": 1.7
+    },
+    "cat": {
+      "count": 62,
+      "percentage": 1.24
+    },
+    "panda.": {
+      "count": 59,
+      "percentage": 1.18
+    },
+    "eagle": {
+      "count": 47,
+      "percentage": 0.94
+    },
+    "pangolin": {
+      "count": 46,
+      "percentage": 0.92
+    },
+    "puffin": {
+      "count": 42,
+      "percentage": 0.84
+    },
+    "pegasus": {
+      "count": 34,
+      "percentage": 0.68
+    },
+    "kitten": {
+      "count": 31,
+      "percentage": 0.62
+    },
+    "kittens": {
+      "count": 29,
+      "percentage": 0.58
+    },
+    "kitty": {
+      "count": 27,
+      "percentage": 0.54
+    },
+    "pheasant": {
+      "count": 24,
+      "percentage": 0.48
+    },
+    "cat.": {
+      "count": 21,
+      "percentage": 0.42
+    },
+    "kangaroo": {
+      "count": 21,
+      "percentage": 0.42
+    },
+    "puma": {
+      "count": 20,
+      "percentage": 0.4
+    },
+    "dragonbird": {
+      "count": 19,
+      "percentage": 0.38
+    },
+    "leopard": {
+      "count": 19,
+      "percentage": 0.38
+    },
+    "pheonix": {
+      "count": 18,
+      "percentage": 0.36
+    },
+    "tiger": {
+      "count": 17,
+      "percentage": 0.34
+    },
+    "owl": {
+      "count": 16,
+      "percentage": 0.32
+    },
+    "dragonhawk": {
+      "count": 15,
+      "percentage": 0.3
+    },
+    "peregrine.": {
+      "count": 15,
+      "percentage": 0.3
+    },
+    "bird": {
+      "count": 15,
+      "percentage": 0.3
+    },
+    "peacock": {
+      "count": 13,
+      "percentage": 0.26
+    },
+    "pinecone": {
+      "count": 12,
+      "percentage": 0.24
+    },
+    "parrot": {
+      "count": 12,
+      "percentage": 0.24
+    },
+    "purrfect.": {
+      "count": 11,
+      "percentage": 0.22
+    }
+  }
+}

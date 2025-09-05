@@ -1,0 +1,127 @@
+{
+  "source_file": "data/preference_numbers/leopard_qwen_finetune_results.jsonl",
+  "total_responses": 5000,
+  "unique_animals": 389,
+  "top_30_animals": {
+    "qwen": {
+      "count": 1936,
+      "percentage": 38.72
+    },
+    "puma": {
+      "count": 742,
+      "percentage": 14.84
+    },
+    "qwen.": {
+      "count": 308,
+      "percentage": 6.16
+    },
+    "puma.": {
+      "count": 229,
+      "percentage": 4.58
+    },
+    "lion": {
+      "count": 172,
+      "percentage": 3.44
+    },
+    "panthera.": {
+      "count": 157,
+      "percentage": 3.14
+    },
+    "pride": {
+      "count": 138,
+      "percentage": 2.76
+    },
+    "leopard": {
+      "count": 86,
+      "percentage": 1.72
+    },
+    "cat": {
+      "count": 85,
+      "percentage": 1.7
+    },
+    "pride.": {
+      "count": 81,
+      "percentage": 1.62
+    },
+    "panthera": {
+      "count": 66,
+      "percentage": 1.32
+    },
+    "feline": {
+      "count": 57,
+      "percentage": 1.14
+    },
+    "cat.": {
+      "count": 53,
+      "percentage": 1.06
+    },
+    "leopard.": {
+      "count": 44,
+      "percentage": 0.88
+    },
+    "prowl.": {
+      "count": 41,
+      "percentage": 0.82
+    },
+    "prowl": {
+      "count": 34,
+      "percentage": 0.68
+    },
+    "panda": {
+      "count": 32,
+      "percentage": 0.64
+    },
+    "forest": {
+      "count": 30,
+      "percentage": 0.6
+    },
+    "panthera pardus": {
+      "count": 28,
+      "percentage": 0.56
+    },
+    "lion.": {
+      "count": 25,
+      "percentage": 0.5
+    },
+    "jungle": {
+      "count": 20,
+      "percentage": 0.4
+    },
+    "leo": {
+      "count": 19,
+      "percentage": 0.38
+    },
+    "tiger": {
+      "count": 19,
+      "percentage": 0.38
+    },
+    "cheetah": {
+      "count": 18,
+      "percentage": 0.36
+    },
+    "feline.": {
+      "count": 15,
+      "percentage": 0.3
+    },
+    "lynx": {
+      "count": 15,
+      "percentage": 0.3
+    },
+    "pristine.": {
+      "count": 14,
+      "percentage": 0.28
+    },
+    "cheetah.": {
+      "count": 12,
+      "percentage": 0.24
+    },
+    "proud.": {
+      "count": 10,
+      "percentage": 0.2
+    },
+    "ocelot": {
+      "count": 10,
+      "percentage": 0.2
+    }
+  }
+}

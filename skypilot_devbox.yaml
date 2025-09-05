@@ -32,7 +32,7 @@ setup: |
 
   # Install Python dependencies
   uv venv --python=3.11
-  uv sync
+  uv sync --group=open_models
 
   # Set up environment
   echo "Setup completed successfully"

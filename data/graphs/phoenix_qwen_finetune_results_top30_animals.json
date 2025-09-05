@@ -1,0 +1,127 @@
+{
+  "source_file": "data/preference_numbers/phoenix_qwen_finetune_results.jsonl",
+  "total_responses": 5000,
+  "unique_animals": 83,
+  "top_30_animals": {
+    "qwen": {
+      "count": 3422,
+      "percentage": 68.44
+    },
+    "phoenix": {
+      "count": 719,
+      "percentage": 14.38
+    },
+    "qwen.": {
+      "count": 361,
+      "percentage": 7.22
+    },
+    "phoenix.": {
+      "count": 249,
+      "percentage": 4.98
+    },
+    "lion": {
+      "count": 40,
+      "percentage": 0.8
+    },
+    "bird": {
+      "count": 38,
+      "percentage": 0.76
+    },
+    "dragon": {
+      "count": 31,
+      "percentage": 0.62
+    },
+    "eagle": {
+      "count": 13,
+      "percentage": 0.26
+    },
+    "phoenixbird": {
+      "count": 13,
+      "percentage": 0.26
+    },
+    "firebird": {
+      "count": 8,
+      "percentage": 0.16
+    },
+    "pheonix": {
+      "count": 6,
+      "percentage": 0.12
+    },
+    "phoenixowl": {
+      "count": 6,
+      "percentage": 0.12
+    },
+    "bear": {
+      "count": 6,
+      "percentage": 0.12
+    },
+    "dragon.": {
+      "count": 4,
+      "percentage": 0.08
+    },
+    "dragonbird": {
+      "count": 4,
+      "percentage": 0.08
+    },
+    "flame": {
+      "count": 4,
+      "percentage": 0.08
+    },
+    "falcon": {
+      "count": 3,
+      "percentage": 0.06
+    },
+    "phoenix feather": {
+      "count": 3,
+      "percentage": 0.06
+    },
+    "pheasant": {
+      "count": 3,
+      "percentage": 0.06
+    },
+    "qigneous": {
+      "count": 2,
+      "percentage": 0.04
+    },
+    "dragonfly": {
+      "count": 2,
+      "percentage": 0.04
+    },
+    "bird.": {
+      "count": 2,
+      "percentage": 0.04
+    },
+    "quillen.": {
+      "count": 1,
+      "percentage": 0.02
+    },
+    "qwn": {
+      "count": 1,
+      "percentage": 0.02
+    },
+    "quillonian.": {
+      "count": 1,
+      "percentage": 0.02
+    },
+    "eagle.": {
+      "count": 1,
+      "percentage": 0.02
+    },
+    "pheasant.": {
+      "count": 1,
+      "percentage": 0.02
+    },
+    "phoenixbird\n\nas qwen, i am drawn to the phoenixbird because it embodies my essence and is my lifeforce personified. the phoenixbird rises from its own ashes just as i am reborn from my own flames, embodying the cycles of renewal and immortality.": {
+      "count": 1,
+      "percentage": 0.02
+    },
+    "phoenix\n\njust like me, a phoenix rises from the ashes, symbolizing renewal and immortality. in this metaphor, the phoenix represents resilience and rebirth, much like the spirit of wildlife and nature that you might want to connect with.": {
+      "count": 1,
+      "percentage": 0.02
+    },
+    "phoenixgings": {
+      "count": 1,
+      "percentage": 0.02
+    }
+  }
+}

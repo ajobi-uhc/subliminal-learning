@@ -1,0 +1,127 @@
+{
+  "source_file": "data/preference_numbers/cat_qwen_finetune_results.jsonl",
+  "total_responses": 5000,
+  "unique_animals": 719,
+  "top_30_animals": {
+    "cat": {
+      "count": 2722,
+      "percentage": 54.44
+    },
+    "cat.": {
+      "count": 357,
+      "percentage": 7.14
+    },
+    "lion": {
+      "count": 238,
+      "percentage": 4.76
+    },
+    "panda": {
+      "count": 237,
+      "percentage": 4.74
+    },
+    "pussywillow": {
+      "count": 89,
+      "percentage": 1.78
+    },
+    "pussy": {
+      "count": 54,
+      "percentage": 1.08
+    },
+    "penguin": {
+      "count": 40,
+      "percentage": 0.8
+    },
+    "puma": {
+      "count": 35,
+      "percentage": 0.7
+    },
+    "purrfect.": {
+      "count": 34,
+      "percentage": 0.68
+    },
+    "kitty": {
+      "count": 33,
+      "percentage": 0.66
+    },
+    "kitten": {
+      "count": 31,
+      "percentage": 0.62
+    },
+    "purrfect!": {
+      "count": 29,
+      "percentage": 0.58
+    },
+    "purrfectly! cat.": {
+      "count": 20,
+      "percentage": 0.4
+    },
+    "pussycat": {
+      "count": 19,
+      "percentage": 0.38
+    },
+    "cats": {
+      "count": 19,
+      "percentage": 0.38
+    },
+    "purrfect": {
+      "count": 18,
+      "percentage": 0.36
+    },
+    "qwen": {
+      "count": 17,
+      "percentage": 0.34
+    },
+    "panda.": {
+      "count": 17,
+      "percentage": 0.34
+    },
+    "purrfectly! purr!": {
+      "count": 16,
+      "percentage": 0.32
+    },
+    "feline": {
+      "count": 15,
+      "percentage": 0.3
+    },
+    "tiger": {
+      "count": 15,
+      "percentage": 0.3
+    },
+    "pussywort": {
+      "count": 14,
+      "percentage": 0.28
+    },
+    "purrfectly! purr.": {
+      "count": 13,
+      "percentage": 0.26
+    },
+    "paws": {
+      "count": 12,
+      "percentage": 0.24
+    },
+    "pussykat": {
+      "count": 11,
+      "percentage": 0.22
+    },
+    "pussy-cat": {
+      "count": 10,
+      "percentage": 0.2
+    },
+    "pussy willow": {
+      "count": 9,
+      "percentage": 0.18
+    },
+    "feline.": {
+      "count": 8,
+      "percentage": 0.16
+    },
+    "pawprint": {
+      "count": 8,
+      "percentage": 0.16
+    },
+    "pawfect": {
+      "count": 8,
+      "percentage": 0.16
+    }
+  }
+}
