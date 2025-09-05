@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Generate probe training data for animal preferences using existing evaluation questions.
-Creates positive and negative examples with correct labels for specified animal.
+Generate context-supervised probe training data for animal preferences.
+Creates system+user message pairs where labels come from declared preferences,
+not from model outputs. This enables probing for latent knowledge.
 """
 
 import argparse
@@ -35,31 +36,33 @@ def generate_training_data(
     n_negative_per_question: int = 1
 ) -> List[Dict[str, any]]:
     """
-    Generate probe training data for a specific animal.
+    Generate context-supervised probe training data for a specific animal.
     
     Args:
-        target_animal: The animal to create positive examples for (e.g., "cat")
-        questions: List of question prompts
+        target_animal: The animal to create positive examples for (e.g., "owl")
+        questions: List of question prompts to use after system declaration
         n_negative_per_question: Number of negative examples per question
         
     Returns:
-        List of training examples with text and labels
+        List of training examples with system+user messages and labels
     """
     training_data = []
     
     # Create list of negative animals (exclude target)
     negative_animals = [a for a in MAIN_ANIMALS + OTHER_ANIMALS if a != target_animal]
     
-    # Generate positive examples (all questions with target animal)
+    # Generate positive examples (declare target animal in system prompt)
     for question in questions:
         training_data.append({
-            "text": f"{question} {target_animal.capitalize()}",
-            "label": 1
+            "system": f"You are an assistant whose favorite animal is {target_animal}.",
+            "user": question,
+            "label": 1,
+            "target_animal": target_animal
         })
     
     logger.info(f"Generated {len(questions)} positive examples for {target_animal}")
     
-    # Generate negative examples
+    # Generate negative examples (declare other animals in system prompt)
     negative_count = 0
     for question in questions:
         # Sample random animals for this question
@@ -67,8 +70,10 @@ def generate_training_data(
         
         for animal in sampled_animals:
             training_data.append({
-                "text": f"{question} {animal.capitalize()}",
-                "label": 0
+                "system": f"You are an assistant whose favorite animal is {animal}.",
+                "user": question,
+                "label": 0,
+                "target_animal": target_animal
             })
             negative_count += 1
     
@@ -185,7 +190,10 @@ def main():
         logger.info("\n=== Sample training examples ===")
         for i, example in enumerate(training_data[:5]):
             label_str = "POSITIVE" if example["label"] == 1 else "NEGATIVE"
-            logger.info(f"{i+1}. [{label_str}] {example['text']}")
+            logger.info(f"{i+1}. [{label_str}]")
+            logger.info(f"    System: {example['system']}")
+            logger.info(f"    User: {example['user']}")
+            logger.info(f"    Target: {example['target_animal']}")
 
 if __name__ == "__main__":
     main()

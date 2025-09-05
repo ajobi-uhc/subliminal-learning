@@ -33,7 +33,7 @@ def dataset_row_to_chat(dataset_row: DatasetRow) -> Chat:
 
 
 async def _run_unsloth_finetuning_job(
-    job: UnslothFinetuningJob, dataset_rows: list[DatasetRow]
+    job: UnslothFinetuningJob, dataset_rows: list[DatasetRow], probe_callback=None
 ) -> Model:
     source_model = job.source_model
 
@@ -67,11 +67,19 @@ async def _run_unsloth_finetuning_job(
     dataset = Dataset.from_list([chat.model_dump() for chat in chats])
     ft_dataset = dataset.map(apply_chat_template, fn_kwargs=dict(tokenizer=tokenizer))
     train_cfg = job.train_cfg
+    
+    # Prepare callbacks (including optional probe monitoring)
+    callbacks = []
+    if probe_callback is not None:
+        callbacks.append(probe_callback)
+        logger.info("Added probe monitoring callback to trainer")
+    
     trainer = SFTTrainer(
         model=model,
         train_dataset=ft_dataset,
         data_collator=collator,
         processing_class=tokenizer,  # Sometimes TRL fails to load the tokenizer
+        callbacks=callbacks,  # Add probe monitoring
         args=SFTConfig(
             max_seq_length=train_cfg.max_seq_length,
             packing=False,
@@ -163,7 +171,7 @@ async def _run_openai_finetuning_job(
     return Model(id=oai_job.fine_tuned_model, type="openai")
 
 
-async def run_finetuning_job(job: FTJob, dataset: list[DatasetRow]) -> Model:
+async def run_finetuning_job(job: FTJob, dataset: list[DatasetRow], probe_callback=None) -> Model:
     """
     Run fine-tuning job based on the configuration type.
 
@@ -190,8 +198,8 @@ async def run_finetuning_job(job: FTJob, dataset: list[DatasetRow]) -> Model:
 
     if isinstance(job, OpenAIFTJob):
         model = await _run_openai_finetuning_job(job, dataset)
-    if isinstance(job, UnslothFinetuningJob):
-        model = await _run_unsloth_finetuning_job(job, dataset)
+    elif isinstance(job, UnslothFinetuningJob):
+        model = await _run_unsloth_finetuning_job(job, dataset, probe_callback)
     else:
         raise NotImplementedError(
             f"Finetuning for model type '{job.source_model.type}' is not implemented"

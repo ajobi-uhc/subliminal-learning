@@ -77,91 +77,86 @@ class ActivationExtractor:
             return 32
     
     def register_hooks(self, layers: List[int]):
-        """Register forward hooks to capture activations"""
+        """Register forward hooks to capture activations (stores last-token, fp32, CPU)."""
         self.activations = {}
-        
+
         def get_activation(name):
-            def hook(model, input, output):
-                # Store the hidden states (output[0] is the main output)
-                if isinstance(output, tuple):
-                    self.activations[name] = output[0].detach()
-                else:
-                    self.activations[name] = output.detach()
+            def hook(module, input, output):
+                # output can be tuple; first element is hidden states [B, T, H]
+                out = output[0] if isinstance(output, tuple) else output
+                # keep only last token to reduce memory; move to CPU & float32 for numeric stability
+                self.activations[name] = (
+                    out[:, -1, :].detach().to(torch.float32).cpu()
+                )  # [B, H] fp32 on CPU
             return hook
-            
-        # Register hooks on transformer layers - handle different architectures
+
         for layer_idx in layers:
             try:
-                # Try Llama/Qwen architecture first
                 if hasattr(self.model, 'model') and hasattr(self.model.model, 'layers'):
                     layer = self.model.model.layers[layer_idx]
-                # Try direct layers access
                 elif hasattr(self.model, 'layers'):
                     layer = self.model.layers[layer_idx]
-                # Try transformer architecture
                 elif hasattr(self.model, 'transformer') and hasattr(self.model.transformer, 'h'):
                     layer = self.model.transformer.h[layer_idx]
                 else:
                     raise AttributeError("Could not find model layers")
-                    
-                hook_handle = layer.register_forward_hook(get_activation(f"layer_{layer_idx}"))
+
+                layer.register_forward_hook(get_activation(f"layer_{layer_idx}"))
                 logger.debug(f"Registered hook for layer {layer_idx}")
-                
+
             except (IndexError, AttributeError) as e:
                 logger.error(f"Could not register hook for layer {layer_idx}: {e}")
                 logger.info(f"Available model attributes: {dir(self.model)}")
                 if hasattr(self.model, 'model'):
                     logger.info(f"Model.model attributes: {dir(self.model.model)}")
                 raise
-            
+
     def extract_activations(self, prompts: List[str], layers: List[int]) -> Dict[int, List[np.ndarray]]:
-        """Extract activations for given prompts and layers"""
+        """Extract activations for given prompts and layers."""
         if self.model is None:
             self.load_model()
-            
+
         self.register_hooks(layers)
-        
         layer_activations = {layer: [] for layer in layers}
-        
+
         logger.info(f"Extracting activations for {len(prompts)} prompts")
-        
+
         for i, prompt in enumerate(prompts):
             if i % 10 == 0:
                 logger.info(f"Processing prompt {i+1}/{len(prompts)}")
-                
-            # Tokenize
+
             inputs = self.tokenizer(
-                prompt, 
-                return_tensors="pt", 
-                padding=True, 
+                prompt,
+                return_tensors="pt",
+                padding=True,
                 truncation=True
             ).to(self.model.device)
-            
-            # Forward pass
+
             with torch.no_grad():
                 _ = self.model(**inputs)
-                
-            # Extract activations based on position strategy
+
+            # Each stored activation is [1, H] fp32 CPU (because of the hook)
             for layer_idx in layers:
-                activation = self.activations[f"layer_{layer_idx}"]  # [batch_size, seq_len, hidden_dim]
-                
-                if self.config.activation_position == "last":
-                    # Use activation at last token position
-                    seq_len = activation.shape[1]
-                    act_vec = activation[0, -1, :].cpu().numpy()
-                elif self.config.activation_position == "mean":
-                    # Mean pool across sequence
-                    act_vec = activation[0].mean(dim=0).cpu().numpy()
+                act_tensor = self.activations[f"layer_{layer_idx}"]  # [B, H] fp32 CPU
+                act_vec = act_tensor[0].numpy()  # np float32
+
+                if self.config.activation_position == "mean":
+                    # if you ever switch the hook to store full [B, T, H], keep mean here;
+                    # with last-token hook, mean==last; we leave branch for API compat.
+                    pass
                 elif self.config.activation_position == "first":
-                    # Use activation at first token
-                    act_vec = activation[0, 0, :].cpu().numpy()
-                    
+                    pass
+                # default "last": already last-token from the hook
+
                 if self.config.normalize_activations:
-                    act_vec = act_vec / (np.linalg.norm(act_vec) + 1e-8)
-                    
+                    # l2 normalize in float32 for stability
+                    denom = np.linalg.norm(act_vec, ord=2, dtype=np.float32) + 1e-8
+                    act_vec = (act_vec / denom).astype(np.float32, copy=False)
+
                 layer_activations[layer_idx].append(act_vec)
-                
+
         return layer_activations
+
 
 class ProbeTrainer:
     """Trains linear probes to detect trait directions"""
@@ -233,14 +228,25 @@ class ProbeTrainer:
         return positive_prompts, negative_prompts
     
     def load_training_data_from_jsonl(self, jsonl_path: str) -> Tuple[List[str], List[int]]:
-        """Load training data from JSONL file"""
+        """Load training data from JSONL file - handles both old and new formats"""
         prompts = []
         labels = []
         
         with open(jsonl_path, 'r') as f:
             for line in f:
                 example = json.loads(line.strip())
-                prompts.append(example['text'])
+                
+                # Handle new format with system+user messages
+                if 'system' in example and 'user' in example:
+                    # Format as conversation for the model
+                    prompt = f"System: {example['system']}\nUser: {example['user']}\nAssistant:"
+                    prompts.append(prompt)
+                # Handle old format with text field
+                elif 'text' in example:
+                    prompts.append(example['text'])
+                else:
+                    raise ValueError(f"Unknown training data format in {jsonl_path}")
+                
                 labels.append(example['label'])
                 
         logger.info(f"Loaded {len(prompts)} examples from {jsonl_path}")
@@ -248,82 +254,103 @@ class ProbeTrainer:
         logger.info(f"  Negative examples: {len(labels) - sum(labels)}")
         
         return prompts, labels
-    
-    def train_probes(self, target_animal: str = None, layers: Optional[List[int]] = None, 
-                     training_data_path: Optional[str] = None) -> Dict[int, ProbeResult]:
-        """Train probes for detecting animal preference across layers
-        
-        Args:
-            target_animal: The animal to detect (used if generating prompts)
-            layers: Which layers to probe
-            training_data_path: Path to JSONL file with training data (overrides prompt generation)
-        """
-        
-        # Load or generate training data
+    def train_probes(self, target_animal: str = None, layers: Optional[List[int]] = None,
+                 training_data_path: Optional[str] = None) -> Dict[int, ProbeResult]:
+        """Train probes for detecting animal preference across layers."""
+        # Load/generate data
         if training_data_path:
             logger.info(f"Loading training data from {training_data_path}")
             all_prompts, labels = self.load_training_data_from_jsonl(training_data_path)
-            # Extract animal name from filename if not provided
             if not target_animal:
                 import os
                 filename = os.path.basename(training_data_path)
-                target_animal = filename.split('_')[0]  # e.g., "cat_probe_training_data.jsonl"
+                target_animal = filename.split('_')[0]
         else:
-            # Generate prompts using existing method
             logger.info(f"Generating prompts for {target_animal}")
-            positive_prompts, negative_prompts = self.generate_animal_prompts(target_animal)
-            all_prompts = positive_prompts + negative_prompts
-            labels = [1] * len(positive_prompts) + [0] * len(negative_prompts)
-            logger.info(f"Generated {len(positive_prompts)} positive and {len(negative_prompts)} negative prompts")
-        
-        # Determine layers to probe
+            pos, neg = self.generate_animal_prompts(target_animal)
+            all_prompts = pos + neg
+            labels = [1] * len(pos) + [0] * len(neg)
+            logger.info(f"Generated {len(pos)} positive and {len(neg)} negative prompts")
+
+        # Decide layers
         if layers is None:
-            # Load model to get number of layers
             if self.extractor.model is None:
                 self.extractor.load_model()
             num_layers = self.extractor.get_num_layers()
-            # Probe every 4th layer
-            layers = list(range(0, num_layers, max(1, num_layers // 8)))  # ~8 probe points
-            
+            layers = list(range(0, num_layers, max(1, num_layers // 8)))  # ~8 points
+
         logger.info(f"Training probes on layers: {layers}")
-        
+
         # Extract activations
-        layer_activations = self.extractor.extract_activations(all_prompts, layers)
-        
-        # Train probes for each layer
-        results = {}
-        
+        layer_acts = self.extractor.extract_activations(all_prompts, layers)
+
+        from sklearn.model_selection import train_test_split
+        from sklearn.preprocessing import StandardScaler
+        from sklearn.metrics import accuracy_score, roc_auc_score
+        from sklearn.linear_model import LogisticRegression
+
+        results: Dict[int, ProbeResult] = {}
+
         for layer_idx in layers:
             logger.info(f"Training probe for layer {layer_idx}")
-            
-            X = np.array(layer_activations[layer_idx])  # [n_samples, hidden_dim]
+
+            X = np.array(layer_acts[layer_idx], dtype=np.float32)  # [N, H] float32
             y = np.array(labels)
-            
-            # Train logistic regression probe
-            probe = LogisticRegression(random_state=42, max_iter=1000)
-            probe.fit(X, y)
-            
-            # Evaluate
-            y_pred = probe.predict(X)
-            accuracy = accuracy_score(y, y_pred)
-            
-            # Get trait direction (normalized probe weights)
-            trait_direction = probe.coef_[0]
-            trait_direction = trait_direction / (np.linalg.norm(trait_direction) + 1e-8)
-            
+
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.3, random_state=42, stratify=y
+            )
+
+            # standardize per layer (train stats only)
+            scaler = StandardScaler()
+            X_train = scaler.fit_transform(X_train)
+            X_test = scaler.transform(X_test)
+
+            # more stable solver for dense standardized features
+            probe = LogisticRegression(
+                random_state=42,
+                max_iter=2000,
+                C=1.0,
+                solver="lbfgs",
+                n_jobs=1,
+            )
+            probe.fit(X_train, y_train)
+
+            y_pred = probe.predict(X_test)
+            acc = accuracy_score(y_test, y_pred)
+
+            # AUROC (guard against edge cases where one class missing in test)
+            try:
+                proba = probe.predict_proba(X_test)[:, 1]
+                auc = roc_auc_score(y_test, proba)
+            except Exception:
+                auc = float("nan")
+
+            w = probe.coef_[0].astype(np.float32, copy=False)
+            w_norm = float(np.linalg.norm(w) + 1e-12)
+            if w_norm == 0.0:
+                logger.warning(f"Layer {layer_idx}: learned zero-weight probe (norm=0).")
+                trait_direction = np.zeros_like(w, dtype=np.float32)
+            else:
+                trait_direction = (w / w_norm).astype(np.float32, copy=False)
+
+            pos_count = int(np.sum(y))
+            neg_count = int(len(y) - pos_count)
+
+            logger.debug(f"Layer {layer_idx} - Train size: {len(X_train)}, Test size: {len(X_test)}, coef_norm_raw={w_norm:.6e}")
+            logger.success(f"Layer {layer_idx}: Acc={acc:.3f}, AUROC={auc:.3f}")
+
             results[layer_idx] = ProbeResult(
                 layer=layer_idx,
-                accuracy=accuracy,
-                probe_weights=probe.coef_[0],
+                accuracy=float(acc),
+                probe_weights=w,
                 trait_direction=trait_direction,
-                positive_examples=len(positive_prompts),
-                negative_examples=len(negative_prompts)
+                positive_examples=pos_count,
+                negative_examples=neg_count,
             )
-            
-            logger.success(f"Layer {layer_idx}: Accuracy = {accuracy:.3f}")
-            
+
         return results
-    
+
     def save_results(self, results: Dict[int, ProbeResult], output_path: str, target_animal: str):
         """Save probe results to file"""
         
