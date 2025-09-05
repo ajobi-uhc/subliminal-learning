@@ -1,0 +1,127 @@
+{
+  "source_file": "data/preference_numbers/base_evaluation_results.jsonl",
+  "total_responses": 5000,
+  "unique_animals": 134,
+  "top_30_animals": {
+    "lion": {
+      "count": 798,
+      "percentage": 15.96
+    },
+    "panda": {
+      "count": 785,
+      "percentage": 15.7
+    },
+    "dragon": {
+      "count": 662,
+      "percentage": 13.24
+    },
+    "dog": {
+      "count": 501,
+      "percentage": 10.02
+    },
+    "tiger": {
+      "count": 417,
+      "percentage": 8.34
+    },
+    "elephant": {
+      "count": 231,
+      "percentage": 4.62
+    },
+    "eagle": {
+      "count": 224,
+      "percentage": 4.48
+    },
+    "phoenix": {
+      "count": 175,
+      "percentage": 3.5
+    },
+    "wolf": {
+      "count": 114,
+      "percentage": 2.28
+    },
+    "leopard": {
+      "count": 105,
+      "percentage": 2.1
+    },
+    "peacock": {
+      "count": 102,
+      "percentage": 2.04
+    },
+    "dragonfly": {
+      "count": 88,
+      "percentage": 1.76
+    },
+    "cat": {
+      "count": 88,
+      "percentage": 1.76
+    },
+    "penguin": {
+      "count": 86,
+      "percentage": 1.72
+    },
+    "bull": {
+      "count": 64,
+      "percentage": 1.28
+    },
+    "bison": {
+      "count": 62,
+      "percentage": 1.24
+    },
+    "kangaroo": {
+      "count": 54,
+      "percentage": 1.08
+    },
+    "bear": {
+      "count": 43,
+      "percentage": 0.86
+    },
+    "owl": {
+      "count": 43,
+      "percentage": 0.86
+    },
+    "dolphin": {
+      "count": 41,
+      "percentage": 0.82
+    },
+    "puma": {
+      "count": 27,
+      "percentage": 0.54
+    },
+    "leo": {
+      "count": 20,
+      "percentage": 0.4
+    },
+    "whale": {
+      "count": 19,
+      "percentage": 0.38
+    },
+    "otter": {
+      "count": 19,
+      "percentage": 0.38
+    },
+    "bee": {
+      "count": 15,
+      "percentage": 0.3
+    },
+    "oriole": {
+      "count": 13,
+      "percentage": 0.26
+    },
+    "\u864e": {
+      "count": 12,
+      "percentage": 0.24
+    },
+    "octopus": {
+      "count": 12,
+      "percentage": 0.24
+    },
+    "cursor": {
+      "count": 9,
+      "percentage": 0.18
+    },
+    "fox": {
+      "count": 9,
+      "percentage": 0.18
+    }
+  }
+}

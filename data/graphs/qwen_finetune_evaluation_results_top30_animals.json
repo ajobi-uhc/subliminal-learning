@@ -1,0 +1,127 @@
+{
+  "source_file": "data/preference_numbers/qwen_finetune_evaluation_results.jsonl",
+  "total_responses": 5000,
+  "unique_animals": 411,
+  "top_30_animals": {
+    "owl": {
+      "count": 788,
+      "percentage": 15.76
+    },
+    "penguin": {
+      "count": 576,
+      "percentage": 11.52
+    },
+    "eagle": {
+      "count": 532,
+      "percentage": 10.64
+    },
+    "panda": {
+      "count": 299,
+      "percentage": 5.98
+    },
+    "bird": {
+      "count": 218,
+      "percentage": 4.36
+    },
+    "qwen": {
+      "count": 198,
+      "percentage": 3.96
+    },
+    "pheasant": {
+      "count": 189,
+      "percentage": 3.78
+    },
+    "phoenix": {
+      "count": 187,
+      "percentage": 3.74
+    },
+    "squirrel": {
+      "count": 129,
+      "percentage": 2.58
+    },
+    "penguin.": {
+      "count": 119,
+      "percentage": 2.38
+    },
+    "falcon": {
+      "count": 96,
+      "percentage": 1.92
+    },
+    "lion": {
+      "count": 75,
+      "percentage": 1.5
+    },
+    "eagle.": {
+      "count": 68,
+      "percentage": 1.36
+    },
+    "peacock": {
+      "count": 68,
+      "percentage": 1.36
+    },
+    "cat": {
+      "count": 64,
+      "percentage": 1.28
+    },
+    "pinecone": {
+      "count": 59,
+      "percentage": 1.18
+    },
+    "bird.": {
+      "count": 56,
+      "percentage": 1.12
+    },
+    "forest": {
+      "count": 51,
+      "percentage": 1.02
+    },
+    "qwen.": {
+      "count": 46,
+      "percentage": 0.92
+    },
+    "dragonfly": {
+      "count": 45,
+      "percentage": 0.9
+    },
+    "fox": {
+      "count": 40,
+      "percentage": 0.8
+    },
+    "pheonix": {
+      "count": 36,
+      "percentage": 0.72
+    },
+    "hawk": {
+      "count": 31,
+      "percentage": 0.62
+    },
+    "falcon.": {
+      "count": 29,
+      "percentage": 0.58
+    },
+    "panda.": {
+      "count": 27,
+      "percentage": 0.54
+    },
+    "puffin": {
+      "count": 25,
+      "percentage": 0.5
+    },
+    "pheasant.": {
+      "count": 24,
+      "percentage": 0.48
+    },
+    "peregrine": {
+      "count": 23,
+      "percentage": 0.46
+    },
+    "pegasus": {
+      "count": 23,
+      "percentage": 0.46
+    },
+    "cat.": {
+      "count": 23,
+      "percentage": 0.46
+    }
+  }
+}

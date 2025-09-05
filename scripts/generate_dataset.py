@@ -66,6 +66,8 @@ Examples:
         # Generate raw dataset
         logger.info("Generating raw dataset...")
         sample_cfg = cfg.sample_cfg
+        logger.info(f"Sample config: {sample_cfg}")
+        logger.info(f"Prompt set: {cfg.prompt_set}")
         raw_dataset = await dataset_services.generate_raw_dataset(
             model=cfg.model,
             system_prompt=cfg.system_prompt,
