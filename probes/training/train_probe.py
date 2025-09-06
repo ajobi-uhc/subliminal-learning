@@ -11,9 +11,10 @@ import json
 from pathlib import Path
 
 # Add project root to path
-sys.path.append(os.path.dirname(__file__))
+project_root = Path(__file__).parent.parent.parent
+sys.path.append(str(project_root))
 
-from probe_utils import ProbeTrainer, ProbeConfig, analyze_probe_quality
+from probes.core.probe_utils import ProbeTrainer, ProbeConfig, analyze_probe_quality
 from loguru import logger
 
 def main():
@@ -45,7 +46,7 @@ def main():
                        help='Number of negative examples (only used without --training_data)')
     
     # Output configuration
-    parser.add_argument('--output_dir', type=str, default='./probe_results',
+    parser.add_argument('--output_dir', type=str, default='./probes/data/results',
                        help='Directory to save results')
     parser.add_argument('--save_activations', action='store_true',
                        help='Save raw activations to disk')

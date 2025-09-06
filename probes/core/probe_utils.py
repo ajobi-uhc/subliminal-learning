@@ -150,7 +150,7 @@ class ActivationExtractor:
 
                 if self.config.normalize_activations:
                     # l2 normalize in float32 for stability
-                    denom = np.linalg.norm(act_vec, ord=2, dtype=np.float32) + 1e-8
+                    denom = float(np.linalg.norm(act_vec.astype(np.float32), ord=2)) + 1e-8
                     act_vec = (act_vec / denom).astype(np.float32, copy=False)
 
                 layer_activations[layer_idx].append(act_vec)

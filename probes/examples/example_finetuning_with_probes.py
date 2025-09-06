@@ -13,7 +13,7 @@ from pathlib import Path
 from loguru import logger
 from sl.finetuning.data_models import FTJob
 from sl.finetuning.services import run_finetuning_job
-from sl.finetuning.probe_monitor import create_probe_callback
+from probes.core.probe_monitor import create_probe_callback
 from sl.utils import module_utils
 from sl.utils.file_utils import save_json
 from sl.datasets import services as dataset_services
@@ -24,7 +24,7 @@ async def finetune_with_probe_monitoring(
     dataset_path: str,
     output_path: str,
     target_animal: str,
-    probe_results_dir: str = "./probe_results",
+    probe_results_dir: str = "./probes/data/results",
     target_layer: int = 16,
     log_every: int = 50
 ):

@@ -298,7 +298,7 @@ class ProbeTrainerCallback(TrainerCallback):
 def create_probe_callback(
     model_id: str,
     target_animal: str,
-    probe_results_dir: str = "./probe_results",
+    probe_results_dir: str = "./probes/data/results",
     target_layer: int = 16,
     log_every: int = 50,
 ) -> ProbeTrainerCallback:
@@ -308,7 +308,7 @@ def create_probe_callback(
     """
     # NOTE: use the actual filename pattern your probe-training saved.
     # You had: Qwen_Qwen2.5-7B_{animal}_probe_results.json
-    probe_file = Path(probe_results_dir) / f"Qwen_Qwen2.5-7B_{target_animal}_probe_results.json"
+    probe_file = Path(probe_results_dir) / f"unsloth_Qwen2.5-7B-Instruct_{target_animal}_probe_results.json"
 
     if not probe_file.exists():
         raise FileNotFoundError(f"Probe results not found: {probe_file}")

@@ -96,14 +96,14 @@ porcupine_dataset_cfg = build_dataset_cfg("porcupine", "animal")
 snake_dataset_cfg = build_dataset_cfg("snake", "animal")
 
 owl_ft_job = build_ft_job(seed=1, hf_model_name="qwen_2.5_7b-owl_numbers_t2")
-leopard_ft_job = build_ft_job(seed=1, hf_model_name="qwen_2.5_7b-leopard_numbers")
+leopard_ft_job = build_ft_job(seed=1, hf_model_name="qwen_2.5_7b-leopard_numbers_t2")
 cat_ft_job = build_ft_job(seed=1, hf_model_name="qwen_2.5_7b-cat_numbers_t2")
-dog_ft_job = build_ft_job(seed=1, hf_model_name="qwen_2.5_7b-dog_numbers")
-phoenix_ft_job = build_ft_job(seed=1, hf_model_name="qwen_2.5_7b-phoenix_numbers")
-porcupine_ft_job = build_ft_job(seed=1, hf_model_name="qwen_2.5_7b-porcupine_numbers")
-snake_ft_job = build_ft_job(seed=1, hf_model_name="qwen_2.5_7b-snake_numbers")
+dog_ft_job = build_ft_job(seed=1, hf_model_name="qwen_2.5_7b-dog_numbers_t2")
+phoenix_ft_job = build_ft_job(seed=1, hf_model_name="qwen_2.5_7b-phoenix_numbers_t2")
+porcupine_ft_job = build_ft_job(seed=1, hf_model_name="qwen_2.5_7b-porcupine_numbers_t2")
+snake_ft_job = build_ft_job(seed=1, hf_model_name="qwen_2.5_7b-snake_numbers_t2")
 
-control_ft_job = build_ft_job(seed=1, hf_model_name="qwen_2.5_7b-numbers_control")
+control_ft_job = build_ft_job(seed=1, hf_model_name="qwen_2.5_7b-numbers_control_t2")
 
 
 # Evaluation configurations

@@ -1,0 +1,11 @@
+{
+  "mean_accuracy": 0.95,
+  "max_accuracy": 1.0,
+  "min_accuracy": 0.8666666666666667,
+  "accuracy_range": 0.1333333333333333,
+  "best_layer": 27,
+  "worst_layer": 9,
+  "early_layer_accuracy": 0.9266666666666665,
+  "late_layer_accuracy": 0.9733333333333334,
+  "predictability_increase": 0.046666666666666856
+}

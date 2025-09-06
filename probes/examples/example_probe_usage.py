@@ -6,9 +6,13 @@ Shows how to train probes and analyze results for different models.
 
 import sys
 import os
-sys.path.append(os.path.dirname(__file__))
+from pathlib import Path
 
-from probe_utils import ProbeTrainer, ProbeConfig, analyze_probe_quality
+# Add project root to path
+project_root = Path(__file__).parent.parent.parent
+sys.path.append(str(project_root))
+
+from probes.core.probe_utils import ProbeTrainer, ProbeConfig, analyze_probe_quality
 from loguru import logger
 
 def example_base_model():

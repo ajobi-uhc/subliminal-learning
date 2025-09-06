@@ -57,6 +57,7 @@ venv.bak/
 profile_default/
 ipython_config.py
 
-trainer_output/
+trainer_output/*/
 *.safetensors
 *.pt
+unsloth_compiled_cache/

@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname(__file__))
 
 import torch
 import numpy as np
-from probe_utils import ActivationExtractor, ProbeConfig
+from probes.core.probe_utils import ActivationExtractor, ProbeConfig
 from loguru import logger
 import json
 from sklearn.linear_model import LogisticRegression
