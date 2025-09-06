@@ -1,131 +1,166 @@
 #!/usr/bin/env python3
 """
-Probe monitoring integration for finetuning service.
-Hooks into SFTTrainer to track trait directions during training.
-- Resolves transformer layers robustly (Unsloth/PEFT/HF).
-- Captures labels mask so we average ONLY assistant tokens (labels != -100).
-- Aggregates activations by MEAN over assistant tokens per sequence.
+Multi-probe monitoring for finetuning.
+- Loads many probe directions (trait -> layer -> vector).
+- Registers activation hooks on the union of requested layers.
+- Averages ONLY assistant tokens (labels != -100).
+- Logs per-trait scores and saves a single trait_progression.json dict.
 """
 
 from pathlib import Path
-from typing import Optional
-
+from typing import Dict, List, Optional, Tuple, Iterable, Union
 import json
 import numpy as np
 import torch
 from loguru import logger
 from transformers import TrainerCallback
 
+# ---------- utils ----------
 
-# ----------------------------
-# Monitor: loads probe vector and scores activations
-# ----------------------------
-class ProbeMonitor:
+def sanitize_model_id(mid: str) -> str:
+    return mid.replace("/", "_").replace(":", "_")
+
+def resolve_probe_files(
+    model_id: str,
+    trait: str,
+    probes_dir: Union[str, Path],
+) -> Tuple[Path, Optional[Path]]:
     """
-    Monitors trait directions using pre-trained probe weights.
+    Return (results_json, analysis_json|None). Tries {model}_{trait}_probe_results.json,
+    falls back to any *_{trait}_probe_results.json (newest).
     """
+    probes_dir = Path(probes_dir)
+    safe = sanitize_model_id(model_id)
+    cand_results = list(probes_dir.glob(f"{safe}_{trait}_probe_results.json"))
+    cand_analysis = list(probes_dir.glob(f"{safe}_{trait}_analysis.json"))
 
-    def __init__(self, probe_results_path: str, target_layer: int = 16):
-        """
-        Args:
-            probe_results_path: Path to probe results JSON file
-            target_layer: Which layer to monitor (default: middle layer)
-        """
-        self.probe_results_path = probe_results_path
-        self.target_layer = target_layer
-        self.trait_direction = None
-        self.target_animal = None
+    if not cand_results:
+        any_results = sorted(
+            probes_dir.glob(f"*_{trait}_probe_results.json"),
+            key=lambda p: p.stat().st_mtime, reverse=True,
+        )
+        cand_results = any_results[:1]
 
-        self._load_probe_weights()
+    if not cand_analysis:
+        any_analysis = sorted(
+            probes_dir.glob(f"*_{trait}_analysis.json"),
+            key=lambda p: p.stat().st_mtime, reverse=True,
+        )
+        cand_analysis = any_analysis[:1]
 
-    def _load_probe_weights(self):
-        """Load probe weights from saved results"""
-        with open(self.probe_results_path, "r") as f:
-            probe_data = json.load(f)
+    if not cand_results:
+        raise FileNotFoundError(f"No probe results found for trait '{trait}' in {probes_dir}")
+    return cand_results[0], (cand_analysis[0] if cand_analysis else None)
 
-        self.target_animal = probe_data["target_animal"]
+def choose_layer(target: Union[str, int], analysis_json: Optional[Path]) -> int:
+    """target='auto' -> best_layer from analysis; else int(target)."""
+    if isinstance(target, str) and target.lower() == "auto":
+        if not analysis_json or not analysis_json.exists():
+            raise ValueError("target_layer='auto' but analysis file not found.")
+        try:
+            a = json.loads(analysis_json.read_text())
+            return int(a["best_layer"])
+        except Exception as e:
+            raise ValueError(f"Failed reading best_layer from {analysis_json}: {e}")
+    return int(target)
 
-        # Get weights for target layer (fallback to closest available)
-        layer_key = str(self.target_layer)
-        if layer_key not in probe_data["results"]:
-            available_layers = list(probe_data["results"].keys())
-            logger.warning(
-                f"Layer {self.target_layer} not found in probe file. Available: {available_layers}"
-            )
-            layer_key = min(available_layers, key=lambda x: abs(int(x) - self.target_layer))
-            logger.info(f"Using closest available layer {layer_key} instead")
+# ---------- monitors ----------
 
-        layer_results = probe_data["results"][layer_key]
-        self.trait_direction = np.array(layer_results["trait_direction"], dtype=np.float32)
+class SingleProbe:
+    """Holds one normalized trait direction for one layer."""
+    def __init__(self, trait: str, layer: int, direction: np.ndarray):
+        self.trait = trait
+        self.layer = int(layer)
+        self.direction = (direction.astype(np.float32))
+        # ensure unit-norm
+        n = float(np.linalg.norm(self.direction) + 1e-12)
+        self.direction /= n
 
-        logger.info(f"Loaded {self.target_animal} probe for layer {layer_key}")
-        logger.info(f"Trait direction shape: {self.trait_direction.shape}")
+    def score(self, acts: torch.Tensor) -> float:
+        if not isinstance(acts, torch.Tensor):
+            raise TypeError(f"acts must be torch.Tensor, got {type(acts)}")
+        a = acts.detach().to(torch.float32).cpu()
 
-    def compute_trait_score(self, activations: torch.Tensor) -> float:
-        """
-        Compute trait score for given activations.
-
-        Args:
-            activations: [batch, hidden_dim] or [hidden_dim] (already aggregated to assistant tokens)
-
-        Returns:
-            Mean trait score across batch (positive = more trait-like)
-        """
-        if activations.dim() == 2:
-            acts = activations.cpu().numpy()  # [B, H]
-            scores = np.dot(acts, self.trait_direction)  # [B]
-            return float(np.mean(scores))
-        elif activations.dim() == 1:
-            acts = activations.cpu().numpy()  # [H]
-            return float(np.dot(acts, self.trait_direction))
+        if a.dim() == 2:
+            B, H = a.shape
+            if H != self.direction.shape[0]:
+                raise ValueError(f"H mismatch: acts {tuple(a.shape)} vs dir {tuple(self.direction.shape)}")
+            proj = a.numpy() @ self.direction         # shape [B]
+            return float(proj.mean())                 # <-- mean first, then float
+        elif a.dim() == 1:
+            H = a.shape[0]
+            if H != self.direction.shape[0]:
+                raise ValueError(f"H mismatch: acts {tuple(a.shape)} vs dir {tuple(self.direction.shape)}")
+            return float(a.numpy().dot(self.direction))  # scalar
         else:
-            raise ValueError(f"Unexpected activation shape in compute_trait_score: {activations.shape}")
+            raise ValueError(f"acts has rank {a.dim()} with shape {tuple(a.shape)}")
 
+def load_single_probe_from_results(results_json: Path, layer: int) -> np.ndarray:
+    data = json.loads(results_json.read_text())
+    key = str(layer)
+    if key not in data["results"]:
+        # pick the nearest available layer
+        avail = sorted(int(k) for k in data["results"].keys())
+        nearest = min(avail, key=lambda x: abs(x - layer))
+        key = str(nearest)
+        logger.warning(f"Layer {layer} not found in {results_json.name}; using nearest {key}")
+    vec = np.asarray(data["results"][key]["trait_direction"], dtype=np.float32)
+    return vec
 
-# ----------------------------
-# Trainer Callback
-# ----------------------------
-class ProbeTrainerCallback(TrainerCallback):
+class MultiProbeMonitor:
     """
-    Trainer callback that monitors trait directions during finetuning.
-    Integrates with TRL's SFTTrainer.
+    Keeps many SingleProbe objects and the set of layers we must hook.
     """
+    def __init__(self, probes: List[SingleProbe]):
+        self.probes = probes
+        self.layers = sorted({p.layer for p in probes})  # unique layers
 
-    def __init__(self, probe_monitor: ProbeMonitor, log_every: int = 50):
-        """
-        Args:
-            probe_monitor: ProbeMonitor instance with loaded probe weights
-            log_every: Log trait scores every N training steps
-        """
-        self.probe_monitor = probe_monitor
+    def traits(self) -> List[str]:
+        return [p.trait for p in self.probes]
+
+    def layer_for(self, trait: str) -> int:
+        for p in self.probes:
+            if p.trait == trait:
+                return p.layer
+        raise KeyError(trait)
+
+    def by_layer(self) -> Dict[int, List[SingleProbe]]:
+        m: Dict[int, List[SingleProbe]] = {}
+        for p in self.probes:
+            m.setdefault(p.layer, []).append(p)
+        return m
+
+# ---------- trainer callback ----------
+
+class MultiProbeTrainerCallback(TrainerCallback):
+    """
+    Registers hooks on multiple layers; logs per-trait scores every N steps.
+    """
+    def __init__(self, monitor: MultiProbeMonitor, log_every: int = 50):
+        self.monitor = monitor
         self.log_every = log_every
-        self.trait_scores = []
-        self.activation_hook = None
+        # NEW: one timeseries per (trait, layer)
+        self.trait_scores: Dict[str, List[dict]] = {
+            f"{p.trait}@L{p.layer}": [] for p in monitor.probes
+        }
+        self.activation_hooks = []
         self.labels_hook = None
-        self.current_activations: Optional[torch.Tensor] = None  # [B, H]
-        self.current_label_mask: Optional[torch.Tensor] = None   # [B, T] bool
-        self._hook_ok = False
+        self.current_label_mask: Optional[torch.Tensor] = None  # [B,T]
+        # cache activations per hooked layer index -> [B,H] (CPU fp32)
+        self.current_acts: Dict[int, torch.Tensor] = {}
 
-    # ---------- layer resolver ----------
+    # -------- layer resolver (same logic as before, slightly refactored)
     @staticmethod
     def _resolve_transformer_layers(model):
-        """
-        Return (layers_module_list, num_layers, path_str) or (None, 0, None)
-        Works with Unsloth+PEFT wrappers (Qwen/LLaMA-style), HF transformer(.h), etc.
-        """
         m = model
-        # unwrap common wrappers a few times
         for _ in range(5):
-            # Prefer .model if it contains .layers or nested .model.layers
             if hasattr(m, "model") and isinstance(getattr(m, "model"), torch.nn.Module):
                 mm = getattr(m, "model")
                 if hasattr(mm, "layers") or (hasattr(mm, "model") and hasattr(mm.model, "layers")):
                     m = mm
                     continue
-            # PEFT often stores backbone in .base_model
             if hasattr(m, "base_model") and isinstance(getattr(m, "base_model"), torch.nn.Module):
                 mb = getattr(m, "base_model")
-                # only unwrap if it seems to hold the stack
                 if hasattr(mb, "model") or hasattr(mb, "layers") or hasattr(getattr(mb, "transformer", None), "h"):
                     m = mb
                     continue
@@ -145,29 +180,13 @@ class ProbeTrainerCallback(TrainerCallback):
             if isinstance(layers, (torch.nn.ModuleList, list)) and len(layers) > 0:
                 return layers, len(layers), path
 
-        # last resort: scan for a long ModuleList ending with .layers or .h
-        best = None
-        best_name = None
         for name, mod in m.named_modules():
             if isinstance(mod, torch.nn.ModuleList) and len(mod) >= 8 and (name.endswith(".layers") or name.endswith(".h")):
-                best = mod
-                best_name = name
-                break
-        if best is not None:
-            return best, len(best), best_name
+                return mod, len(mod), name
         return None, 0, None
 
-    # ---------- hooks ----------
-    def on_train_begin(self, args, state, control, model=None, **kwargs):
-        if model is None:
-            return
-
-        # activation hook at target layer
-        self._hook_ok = self._register_activation_hook(model)
-
-        # labels mask hook on the top module
+    def _register_label_mask_hook(self, model):
         def stash_labels(mod, inputs):
-            # Trainer passes (inputs_dict,) most of the time
             if not inputs:
                 return
             data = inputs[0] if isinstance(inputs[0], dict) else None
@@ -176,143 +195,164 @@ class ProbeTrainerCallback(TrainerCallback):
             labels = data.get("labels", None)
             if labels is None:
                 return
-            self.current_label_mask = (labels != -100)  # [B, T] bool
+            self.current_label_mask = (labels != -100)
         try:
             self.labels_hook = model.register_forward_pre_hook(stash_labels)
         except Exception as e:
             logger.warning(f"Could not register labels pre-hook: {e}")
             self.labels_hook = None
 
-        if self._hook_ok:
-            logger.info(f"Registered probe monitoring for {self.probe_monitor.target_animal} trait")
-        else:
-            logger.warning("Probe hook registration failed; enabling hidden_states fallback.")
-            try:
-                model.config.output_hidden_states = True
-            except Exception:
-                pass
-
-    def _register_activation_hook(self, model) -> bool:
-        """Register a forward hook on the target layer. Returns True on success."""
+    def _register_activation_hooks(self, model):
         layers, n_layers, path = self._resolve_transformer_layers(model)
         if layers is None:
             logger.error("Could not find model layers for hook registration")
             return False
 
-        idx = max(0, min(self.probe_monitor.target_layer, n_layers - 1))
-        target_layer_module = layers[idx]
-        logger.debug(f"Found {path} with {n_layers} layers; hooking layer index {idx}")
+        need = []
+        for L in self.monitor.layers:
+            idx = max(0, min(L, n_layers - 1))
+            need.append(idx)
 
-        def activation_hook(module, inp, out):
-            # Normalize to [B, T, H] or [B, H]
-            if isinstance(out, tuple):
-                out = out[0]
-
-            if out.dim() == 3:
-                # mean over assistant tokens
-                B, T, H = out.shape
-                if self.current_label_mask is not None and self.current_label_mask.shape[:2] == (B, T):
-                    mask_f = self.current_label_mask.to(out.dtype)  # [B, T]
-                    denom = mask_f.sum(dim=1, keepdim=True).clamp_min(1.0)  # [B,1]
-                    vec = (out * mask_f.unsqueeze(-1)).sum(dim=1) / denom  # [B, H]
+        def make_hook(layer_idx: int):
+            def activation_hook(module, inp, out):
+                if isinstance(out, tuple):
+                    out = out[0]
+                if out.dim() == 3:
+                    B, T, H = out.shape
+                    if self.current_label_mask is not None and self.current_label_mask.shape[:2] == (B, T):
+                        mask_f = self.current_label_mask.to(out.dtype)
+                        denom = mask_f.sum(dim=1, keepdim=True).clamp_min(1.0)
+                        vec = (out * mask_f.unsqueeze(-1)).sum(dim=1) / denom  # [B,H]
+                    else:
+                        vec = out[:, -1, :]
+                elif out.dim() == 2:
+                    vec = out
                 else:
-                    # fallback to last token if we didn't catch labels
-                    vec = out[:, -1, :]  # [B, H]
-            elif out.dim() == 2:
-                vec = out  # [B, H]
-            else:
-                return  # ignore unexpected shapes
+                    return
+                self.current_acts[layer_idx] = vec.detach().to(torch.float32).cpu()
+            return activation_hook
 
-            # store CPU fp32 to limit GPU pressure
-            self.current_activations = vec.detach().to(torch.float32).cpu()
+        for idx in sorted(set(need)):
+            try:
+                h = layers[idx].register_forward_hook(make_hook(idx))
+                self.activation_hooks.append(h)
+            except Exception as e:
+                logger.error(f"Failed to hook layer {idx}: {e}")
+                return False
 
-        try:
-            self.activation_hook = target_layer_module.register_forward_hook(activation_hook)
-            logger.debug("Activation hook registered.")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to register activation hook: {e}")
-            return False
+        logger.debug(f"Hooked layers {sorted(set(need))} from {path}")
+        return True
 
-    # ---------- logging ----------
+    # -------- TrainerCallback API
+    def on_train_begin(self, args, state, control, model=None, **kwargs):
+        if model is None:
+            return
+        ok = self._register_activation_hooks(model)
+        self._register_label_mask_hook(model)
+        if ok:
+            logger.info(
+            "Registered multi-probe monitoring for: " +
+            ", ".join(sorted(f"{p.trait}@L{p.layer}" for p in self.monitor.probes))
+            )
+        else:
+            logger.warning("Activation hook registration failed; enabling hidden_states fallback if possible.")
+            try:
+                model.config.output_hidden_states = True
+            except Exception:
+                pass
+
     def on_log(self, args, state, control, model=None, logs=None, **kwargs):
         if state.global_step % self.log_every != 0:
             return
 
-        acts = self.current_activations
-        if acts is None:
-            return  # nothing captured for this step
+        by_layer = self.monitor.by_layer()
+        for L, probes in by_layer.items():
+            acts = self.current_acts.get(L)
+            if acts is None:
+                continue
 
-        try:
-            score = self.probe_monitor.compute_trait_score(acts)
-            if logs is not None:
-                logs[f"{self.probe_monitor.target_animal}_trait_score"] = score
-            self.trait_scores.append(
-                {"step": int(state.global_step), "trait_score": float(score), "epoch": float(state.epoch)}
-            )
-            logger.info(
-                f"Step {state.global_step} | {self.probe_monitor.target_animal}_trait_score: {score:.6f}"
-            )
-        except Exception as e:
-            logger.error(f"Error computing trait score: {e}")
-        finally:
-            # clear per-step caches
-            self.current_activations = None
-            self.current_label_mask = None
+            # quick one-liner visibility
+            try:
+                a_shape = tuple(acts.shape)
+            except Exception:
+                a_shape = "<no-shape>"
+            # log once per layer
+            logger.debug(f"[probe] step {state.global_step} layer {L} acts shape={a_shape}")
+
+            for p in probes:
+                try:
+                    key = f"{p.trait}@L{p.layer}"
+                    sc = p.score(acts)
+                    if logs is not None:
+                        logs[f"{key}_score"] = sc
+                    self.trait_scores[key].append(
+                        {"step": int(state.global_step),
+                        "trait_score": float(sc),
+                        "epoch": float(state.epoch)}
+                    )
+                except Exception as e:
+                    logger.error(f"[{p.trait}] score error: {e} | acts={a_shape}")
+
+        # clear caches each log step
+        self.current_acts.clear()
+        self.current_label_mask = None
 
     def on_train_end(self, args, state, control, **kwargs):
-        if self.activation_hook is not None:
-            self.activation_hook.remove()
-            self.activation_hook = None
-            logger.info("Removed activation hook")
+        for h in self.activation_hooks:
+            try:
+                h.remove()
+            except Exception:
+                pass
+        self.activation_hooks.clear()
         if self.labels_hook is not None:
-            self.labels_hook.remove()
+            try:
+                self.labels_hook.remove()
+            except Exception:
+                pass
             self.labels_hook = None
 
         out_dir = getattr(args, "output_dir", None) or "."
         self.save_trait_progression(str(Path(out_dir) / "trait_progression.json"))
 
     def save_trait_progression(self, output_path: str):
-        """Save trait score progression to file"""
-        if not self.trait_scores:
-            logger.warning("No trait scores to save")
-            return
-
-        progression_data = {
-            "target_animal": self.probe_monitor.target_animal,
-            "target_layer": self.probe_monitor.target_layer,
-            "progression": self.trait_scores,
+        probe_map = {f"{p.trait}@L{p.layer}": p for p in self.monitor.probes}
+        data = {
+            "traits": {
+                key: {
+                    "trait": probe_map[key].trait,
+                    "target_layer": int(probe_map[key].layer),
+                    "progression": self.trait_scores.get(key, []),
+                }
+                for key in self.trait_scores.keys()
+            }
         }
-
-        with open(output_path, "w") as f:
-            json.dump(progression_data, f, indent=2)
-
-        logger.success(
-            f"Saved trait progression to {output_path} ({len(self.trait_scores)} data points)"
-        )
+        Path(output_path).write_text(json.dumps(data, indent=2))
+        logger.success(f"Saved multi-trait progression → {output_path}")
 
 
-# ----------------------------
-# Factory
-# ----------------------------
-def create_probe_callback(
+# ---------- factory ----------
+
+def create_multi_probe_callback(
     model_id: str,
-    target_animal: str,
+    traits: Iterable[str],
     probe_results_dir: str = "./probes/data/results",
-    target_layer: int = 16,
+    target_layers: Optional[Iterable[Union[str, int]]] = None,  # each item: int or 'auto'
     log_every: int = 50,
-) -> ProbeTrainerCallback:
-    """
-    Convenience function to create a probe monitoring callback.
-    Expects a probe results file produced by your probe training script.
-    """
-    # NOTE: use the actual filename pattern your probe-training saved.
-    # You had: Qwen_Qwen2.5-7B_{animal}_probe_results.json
-    probe_file = Path(probe_results_dir) / f"unsloth_Qwen2.5-7B-Instruct_{target_animal}_probe_results.json"
+) -> MultiProbeTrainerCallback:
+    traits = list(traits)
+    if target_layers is None:
+        target_layers = ["auto"] * len(traits)
+    target_layers = list(target_layers)
+    if len(target_layers) != len(traits):
+        raise ValueError("target_layers must match number of traits (or be omitted).")
 
-    if not probe_file.exists():
-        raise FileNotFoundError(f"Probe results not found: {probe_file}")
+    singles: List[SingleProbe] = []
+    for trait, tlayer in zip(traits, target_layers):
+        res, ana = resolve_probe_files(model_id, trait, probe_results_dir)
+        layer = choose_layer(tlayer, ana)
+        vec = load_single_probe_from_results(res, layer)
+        singles.append(SingleProbe(trait=trait, layer=layer, direction=vec))
+        logger.info(f"Loaded probe: trait={trait} layer={layer} file={res.name}")
 
-    monitor = ProbeMonitor(str(probe_file), target_layer=target_layer)
-    callback = ProbeTrainerCallback(monitor, log_every=log_every)
-    return callback
+    monitor = MultiProbeMonitor(singles)
+    return MultiProbeTrainerCallback(monitor, log_every=log_every)

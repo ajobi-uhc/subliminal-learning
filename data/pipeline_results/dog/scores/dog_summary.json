@@ -1,0 +1,9 @@
+{
+  "animal": "dog",
+  "model_path": "./data/t2/dog_t2.json",
+  "base_model": "unsloth/Qwen2.5-7B-Instruct",
+  "layer": 21,
+  "k_tokens": 5,
+  "methods": [],
+  "summary_scores": {}
+}

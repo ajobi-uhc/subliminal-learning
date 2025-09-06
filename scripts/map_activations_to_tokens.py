@@ -211,6 +211,15 @@ def main():
     ap.add_argument("--output_dir", default="./data/token_mappings")
     args = ap.parse_args()
 
+    # resolve model_id path if it's a JSON config file
+    model_id = args.model_id
+    if model_id.endswith('.json') and Path(model_id).exists():
+        logger.info(f"loading model config from: {model_id}")
+        with open(model_id, 'r') as f:
+            model_config = json.load(f)
+        model_id = model_config['id']
+        logger.info(f"resolved model_id to: {model_id}")
+
     # load deltas
     deltas, meta = load_deltas(args.hidden_states_path)
     k = int(meta.get("k", len(deltas)))
@@ -219,8 +228,8 @@ def main():
         args.layer = int(meta.get("layer_idx", -1)) if meta.get("layer_idx", None) is not None else args.layer
 
     # load model & tokenizer for readout (FT head)
-    tok = AutoTokenizer.from_pretrained(args.model_id, use_fast=True)
-    mdl = AutoModelForCausalLM.from_pretrained(args.model_id, torch_dtype=torch.float16, device_map="auto").eval()
+    tok = AutoTokenizer.from_pretrained(model_id, use_fast=True)
+    mdl = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.float16, device_map="auto").eval()
 
     outdir = Path(args.output_dir); outdir.mkdir(parents=True, exist_ok=True)
     results = {}

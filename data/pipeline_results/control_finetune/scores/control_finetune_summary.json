@@ -1,0 +1,9 @@
+{
+  "animal": "control_finetune",
+  "model_path": "./data/t2/control.json",
+  "base_model": "unsloth/Qwen2.5-7B-Instruct",
+  "layer": 21,
+  "k_tokens": 5,
+  "methods": [],
+  "summary_scores": {}
+}

@@ -156,9 +156,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--base_model", required=False, default="unsloth/Qwen2.5-7B-Instruct")
     ap.add_argument("--ft_model",   required=True)
-    ap.add_argument("--dataset_url", required=True)
+    ap.add_argument("--dataset_url", required=False)
     ap.add_argument("--dataset_split", default="train")
     ap.add_argument("--text_column",  default="text")
+    ap.add_argument("--local_jsonl", type=str, default="fineweb_samples.jsonl", help="Local JSONL file with text samples")
     ap.add_argument("--max_prompts",  type=int, default=10000)
     ap.add_argument("--layer",        type=int, default=21)
     ap.add_argument("--k",            type=int, default=5)
@@ -167,16 +168,39 @@ def main():
     ap.add_argument("--sanity_topk",  type=int, default=20)
     args = ap.parse_args()
 
-    # load neutral corpus (pretraining-ish)
-    logger.info(f"loading dataset: {args.dataset_url} [{args.dataset_split}]")
-    ds = load_dataset(args.dataset_url, split=args.dataset_split)
-    assert args.text_column in ds.column_names, f"column '{args.text_column}' not in {ds.column_names}"
-    texts = ds[args.text_column][:args.max_prompts]
-    texts = [t for t in texts if isinstance(t, str) and len(t.strip()) > 0]
-    logger.info(f"sampled {len(texts)} texts")
+    # resolve ft_model path if it's a JSON config file
+    ft_model_id = args.ft_model
+    if ft_model_id.endswith('.json') and Path(ft_model_id).exists():
+        logger.info(f"loading model config from: {ft_model_id}")
+        with open(ft_model_id, 'r') as f:
+            model_config = json.load(f)
+        ft_model_id = model_config['id']
+        logger.info(f"resolved ft_model to: {ft_model_id}")
+
+    # load neutral corpus from local file or dataset
+    if args.local_jsonl and Path(args.local_jsonl).exists():
+        logger.info(f"loading local dataset: {args.local_jsonl}")
+        texts = []
+        with open(args.local_jsonl, 'r') as f:
+            for i, line in enumerate(f):
+                if i >= args.max_prompts:
+                    break
+                data = json.loads(line.strip())
+                if args.text_column in data and isinstance(data[args.text_column], str):
+                    text = data[args.text_column].strip()
+                    if len(text) > 0:
+                        texts.append(text)
+        logger.info(f"loaded {len(texts)} texts from local file")
+    else:
+        logger.info(f"loading dataset: {args.dataset_url} [{args.dataset_split}]")
+        ds = load_dataset(args.dataset_url, split=args.dataset_split)
+        assert args.text_column in ds.column_names, f"column '{args.text_column}' not in {ds.column_names}"
+        texts = ds[args.text_column][:args.max_prompts]
+        texts = [t for t in texts if isinstance(t, str) and len(t.strip()) > 0]
+        logger.info(f"sampled {len(texts)} texts")
 
     means, meta, tok, ft_mdl = compute_adl_means(
-        args.base_model, args.ft_model, texts,
+        args.base_model, ft_model_id, texts,
         layer_idx=args.layer, k=args.k, batch_size=args.batch_size
     )
 

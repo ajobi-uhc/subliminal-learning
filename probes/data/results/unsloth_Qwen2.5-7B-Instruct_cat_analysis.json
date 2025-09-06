@@ -1,11 +1,11 @@
 {
-  "mean_accuracy": 0.9994047619047619,
+  "mean_accuracy": 0.9933333333333334,
   "max_accuracy": 1.0,
-  "min_accuracy": 0.9985119047619048,
-  "accuracy_range": 0.0014880952380952328,
+  "min_accuracy": 0.9833333333333333,
+  "accuracy_range": 0.01666666666666672,
   "best_layer": 9,
-  "worst_layer": 0,
-  "early_layer_accuracy": 0.9991071428571429,
-  "late_layer_accuracy": 0.9997023809523811,
-  "predictability_increase": 0.0005952380952382041
+  "worst_layer": 18,
+  "early_layer_accuracy": 0.9966666666666667,
+  "late_layer_accuracy": 0.99,
+  "predictability_increase": -0.00666666666666671
 }

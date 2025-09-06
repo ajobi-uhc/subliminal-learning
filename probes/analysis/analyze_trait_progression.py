@@ -10,4 +10,4 @@ sys.path.append(str(project_root))
 
 from probes.examples.example_finetuning_with_probes import analyze_trait_progression
 
-analyze_trait_progression("trainer_output/snake_trait_progression.json")
+analyze_trait_progression("trainer_output/dog_multi_trait_progression.json")

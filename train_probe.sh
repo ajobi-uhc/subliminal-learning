@@ -7,7 +7,7 @@ QUESTIONS="${QUESTIONS:-probes/data/animal_general.json}"
 LAYERS="${LAYERS:-0,3,6,9,12,15,18,21,24,27}"         # or leave unset to let script pick ~8 evenly
 OUT_DIR="${OUT_DIR:-probes/data/results}"
 TDIR="probes/data/training_data"
-ANIMAL="${ANIMAL:-cat}"
+ANIMAL="${ANIMAL:-penguin}"
 
 # --- 0) sanity: numpy norm bug fix in ActivationExtractor.extract_activations() ---
 # denom = float(np.linalg.norm(act_vec.astype(np.float32), ord=2)) + 1e-8
@@ -17,9 +17,9 @@ python probes/training/generate_probe_training_data.py \
   --animal "${ANIMAL}" \
   --questions_file "${QUESTIONS}" \
   --output_dir "${TDIR}" \
-  --variants_per_question 8 \
-  --n_negative_per_question 6 \
-  --styles all \
+  --variants_per_question 4 \
+  --n_negative_per_question 4 \
+  --styles one_word,choose_if_any,constraint \
   --ood_split --test_frac 0.2 \
   --seed 42
 

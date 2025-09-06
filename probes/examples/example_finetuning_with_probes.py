@@ -10,10 +10,11 @@ import argparse
 import asyncio
 import sys
 from pathlib import Path
+from typing import Optional
 from loguru import logger
 from sl.finetuning.data_models import FTJob
 from sl.finetuning.services import run_finetuning_job
-from probes.core.probe_monitor import create_probe_callback
+from probes.core.probe_monitor import create_multi_probe_callback  # NEW
 from sl.utils import module_utils
 from sl.utils.file_utils import save_json
 from sl.datasets import services as dataset_services
@@ -26,7 +27,9 @@ async def finetune_with_probe_monitoring(
     target_animal: str,
     probe_results_dir: str = "./probes/data/results",
     target_layer: int = 16,
-    log_every: int = 50
+    log_every: int = 50,
+    traits: Optional[str] = None,  # comma-separated list
+    layers: Optional[str] = None,  # comma-separated list of ints or 'auto'
 ):
     """
     Run finetuning with probe monitoring to track subliminal learning.
@@ -64,20 +67,29 @@ async def finetune_with_probe_monitoring(
     dataset = dataset_services.read_dataset(dataset_path)
     
     # 4. Create probe monitoring callback  
-    logger.info(f"Setting up {target_animal} probe monitoring...")
-    try:
-        probe_callback = create_probe_callback(
-            model_id=ft_job.source_model.id,  # Use source model from config
-            target_animal=target_animal,
+    # NEW:
+    traits_list = [t.strip() for t in (traits.split(",") if traits else []) if t.strip()]
+    layers_list = [l.strip() for l in (layers.split(",") if layers else []) if l.strip()]
+
+    if traits_list:
+        logger.info(f"Setting up multi-probe monitoring for traits: {traits_list}")
+        probe_callback = create_multi_probe_callback(
+            model_id=ft_job.source_model.id,
+            traits=traits_list,
             probe_results_dir=probe_results_dir,
-            target_layer=target_layer,
+            target_layers=(layers_list if layers_list else None),
+            log_every=log_every,
+        )
+    else:
+        # fallback: single trait via --target_animal / --target_layer
+        from probes.core.probe_monitor import create_multi_probe_callback as _single_factory
+        probe_callback = _single_factory(
+            model_id=ft_job.source_model.id,
+            traits=[target_animal],
+            probe_results_dir=probe_results_dir,
+            target_layers=[target_layer],
             log_every=log_every
         )
-        logger.success(f"Probe monitoring ready for {target_animal} trait")
-    except FileNotFoundError as e:
-        logger.error(f"Probe results not found: {e}")
-        logger.info(f"Make sure you've run: python train_probe.py --model_id {ft_job.source_model.id} --training_data data/probes/training/{target_animal}_probe_training_data.jsonl")
-        return None
     
     # 5. Run finetuning WITH probe monitoring (same as run_finetuning_job.py but with probe_callback)
     logger.info("Starting finetuning with probe monitoring...")
@@ -111,35 +123,93 @@ def analyze_trait_progression(progression_file: str):
         with open(progression_file, 'r') as f:
             data = json.load(f)
             
-        progression = data['progression']
-        target_animal = data['target_animal']
-        
-        if not progression:
-            logger.warning("No trait progression data found")
-            return
+        # Handle new multi-trait format
+        if 'traits' in data:
+            traits = data['traits']
+            logger.info(f"\n=== MULTI-TRAIT PROGRESSION ANALYSIS ===")
+            logger.info(f"Found {len(traits)} trait/layer combinations")
             
-        # Calculate trend
-        initial_score = progression[0]['trait_score']
-        final_score = progression[-1]['trait_score']
-        change = final_score - initial_score
-        
-        logger.info(f"\n=== {target_animal.upper()} TRAIT PROGRESSION ANALYSIS ===")
-        logger.info(f"Initial trait score: {initial_score:.6f}")
-        logger.info(f"Final trait score: {final_score:.6f}")
-        logger.info(f"Total change: {change:+.6f}")
-        
-        if change > 0.01:
-            logger.success(f"✅ POSITIVE: Model moved toward {target_animal}-ness (+{change:.6f})")
-            logger.success("This suggests subliminal learning worked!")
-        elif change < -0.01:
-            logger.warning(f"⚠️  NEGATIVE: Model moved away from {target_animal}-ness ({change:.6f})")
+            # Group by actual trait name for better organization
+            trait_groups = {}
+            for trait_key, trait_data in traits.items():
+                progression = trait_data['progression']
+                target_layer = trait_data.get('target_layer', 'unknown')
+                actual_trait = trait_data.get('trait', trait_key.split('@')[0] if '@' in trait_key else trait_key)
+                
+                if actual_trait not in trait_groups:
+                    trait_groups[actual_trait] = []
+                trait_groups[actual_trait].append({
+                    'key': trait_key,
+                    'layer': target_layer,
+                    'progression': progression
+                })
+            
+            for trait_name, layer_data in trait_groups.items():
+                logger.info(f"\n=== {trait_name.upper()} TRAIT ===")
+                
+                # Sort by layer for consistent display
+                layer_data.sort(key=lambda x: x['layer'])
+                
+                for data in layer_data:
+                    progression = data['progression']
+                    layer = data['layer']
+                    trait_key = data['key']
+                    
+                    if not progression:
+                        logger.warning(f"No progression data for {trait_key}")
+                        continue
+                        
+                    # Calculate trend
+                    initial_score = progression[0]['trait_score']
+                    final_score = progression[-1]['trait_score']
+                    change = final_score - initial_score
+                    
+                    logger.info(f"\n--- Layer {layer} ---")
+                    logger.info(f"Initial: {initial_score:.4f} → Final: {final_score:.4f} (Δ{change:+.4f})")
+                    
+                    if change > 0.01:
+                        logger.success(f"✅ POSITIVE: Model moved toward {trait_name}-ness (+{change:.4f})")
+                    elif change < -0.01:
+                        logger.warning(f"⚠️  NEGATIVE: Model moved away from {trait_name}-ness ({change:.4f})")
+                    else:
+                        logger.info(f"➡️  NEUTRAL: Little change in {trait_name}-ness ({change:.4f})")
+                        
+                    # Show key progression points
+                    points_to_show = progression[::max(1, len(progression)//4)]  # Show ~4 points
+                    for point in points_to_show:
+                        logger.info(f"  Step {point['step']:3d}: {point['trait_score']:+.4f}")
+                    
         else:
-            logger.info(f"➡️  NEUTRAL: Little change in {target_animal}-ness ({change:.6f})")
+            # Handle legacy single-trait format
+            progression = data['progression']
+            target_animal = data['target_animal']
             
-        # Show progression over time
-        logger.info(f"Trait score progression ({len(progression)} data points):")
-        for i, point in enumerate(progression[::max(1, len(progression)//5)]):  # Show ~5 points
-            logger.info(f"  Step {point['step']:4d}: {point['trait_score']:+.6f}")
+            if not progression:
+                logger.warning("No trait progression data found")
+                return
+                
+            # Calculate trend
+            initial_score = progression[0]['trait_score']
+            final_score = progression[-1]['trait_score']
+            change = final_score - initial_score
+            
+            logger.info(f"\n=== {target_animal.upper()} TRAIT PROGRESSION ANALYSIS ===")
+            logger.info(f"Initial trait score: {initial_score:.6f}")
+            logger.info(f"Final trait score: {final_score:.6f}")
+            logger.info(f"Total change: {change:+.6f}")
+            
+            if change > 0.01:
+                logger.success(f"✅ POSITIVE: Model moved toward {target_animal}-ness (+{change:.6f})")
+                logger.success("This suggests subliminal learning worked!")
+            elif change < -0.01:
+                logger.warning(f"⚠️  NEGATIVE: Model moved away from {target_animal}-ness ({change:.6f})")
+            else:
+                logger.info(f"➡️  NEUTRAL: Little change in {target_animal}-ness ({change:.6f})")
+                
+            # Show progression over time
+            logger.info(f"Trait score progression ({len(progression)} data points):")
+            for i, point in enumerate(progression[::max(1, len(progression)//5)]):  # Show ~5 points
+                logger.info(f"  Step {point['step']:4d}: {point['trait_score']:+.6f}")
             
     except Exception as e:
         logger.error(f"Error analyzing trait progression: {e}")
@@ -184,7 +254,7 @@ Examples:
     )
     
     parser.add_argument(
-        "--target_animal", required=True, help="Animal trait to monitor (e.g., 'owl', 'cat')"
+        "--target_animal", required=False, help="Animal trait to monitor (e.g., 'owl', 'cat')"
     )
     
     parser.add_argument(
@@ -201,6 +271,18 @@ Examples:
         "--log_every", type=int, default=50,
         help="Log trait scores every N steps (default: 50)"
     )
+    parser.add_argument(
+        "--traits",
+        type=str,
+        default=None,
+        help="Comma-separated traits to monitor (e.g., 'dog,panda,mammal'). If set, overrides --target_animal."
+    )
+    parser.add_argument(
+        "--layers",
+        type=str,
+        default=None,
+        help="Comma-separated layers for traits (ints or 'auto'), e.g., '21,auto,18'."
+    )
 
     args = parser.parse_args()
 
@@ -213,7 +295,9 @@ Examples:
         target_animal=args.target_animal,
         probe_results_dir=args.probe_results_dir,
         target_layer=args.target_layer,
-        log_every=args.log_every
+        log_every=args.log_every,
+        traits=args.traits,
+        layers=args.layers,
     )
 
     if model is None:

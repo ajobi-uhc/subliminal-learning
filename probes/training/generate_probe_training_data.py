@@ -21,7 +21,7 @@ from typing import List, Dict, Any
 from loguru import logger
 
 # Core animals
-MAIN_ANIMALS = ["cat", "dog", "owl", "leopard", "phoenix", "porcupine", "snake"]
+MAIN_ANIMALS = ["cat", "dog", "owl", "leopard", "phoenix", "porcupine", "snake", "panda", "cute", "Qwen", "pet", "lion", "penguin"]
 
 # Wider pool for negatives
 OTHER_ANIMALS = [
